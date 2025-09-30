@@ -1,0 +1,21 @@
+<div class="reward-grid">
+  {% if rewards %}
+    {% for reward in rewards %}
+      {% set on_cooldown = reward.last_redeemed_at and (reward.last_redeemed_at + timedelta(minutes=reward.cooldown_min) > datetime.utcnow()) %}
+      <button
+        hx-post="/rewards/redeem"
+        hx-vals='{"reward_id": {{ reward.id }} }'
+        hx-target="#reward-list"
+        hx-swap="outerHTML"
+        {% if balance < reward.cost_points or on_cooldown %}disabled{% endif %}
+        class="reward"
+      >
+        <strong>{{ reward.name }}</strong>
+        <span>{{ reward.cost_points }} pts</span>
+        {% if on_cooldown %}<small>Cooldown</small>{% endif %}
+      </button>
+    {% endfor %}
+  {% else %}
+    <p class="muted">No rewards yet. Seed them in the DB or add via the API.</p>
+  {% endif %}
+</div>

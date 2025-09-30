@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="grid">
+  <article>
+    <h2>Quick Capture</h2>
+    <form hx-post="/tasks/form" hx-target="#task-list" hx-swap="outerHTML" hx-on::afterRequest="this.reset()" class="stack">
+      <label>
+        Title
+        <input type="text" name="title" required placeholder="What is the next 5-minute step?" />
+      </label>
+      <div class="grid">
+        <label>
+          Estimate (min)
+          <input type="number" name="est_minutes" min="5" step="5" value="25" />
+        </label>
+        <label>
+          Impact (1-3)
+          <input type="number" name="impact" min="1" max="3" value="1" />
+        </label>
+      </div>
+      <div class="grid">
+        <label>
+          Context
+          <select name="context">
+            <option value="work">Work</option>
+            <option value="home">Home</option>
+            <option value="admin">Admin</option>
+          </select>
+        </label>
+        <label>
+          Due date
+          <input type="date" name="due_date" />
+        </label>
+      </div>
+      <label>
+        Notes
+        <textarea name="note" rows="2" placeholder="Tiny instructions for Future You"></textarea>
+      </label>
+      <button type="submit">Add micro-step</button>
+    </form>
+  </article>
+  <article>
+    <h2>Points &amp; Rewards</h2>
+    <p class="balance">Current points: <strong id="points-balance">{{ balance }}</strong></p>
+    <div id="reward-list" hx-get="/partials/rewards" hx-trigger="load" hx-target="#reward-list" hx-swap="outerHTML">
+      {% include "partials/reward_list.html" %}
+    </div>
+  </article>
+</section>
+
+<section class="grid">
+  <article>
+    <div class="flex-between">
+      <h2>Today&apos;s Top 5</h2>
+      <button class="secondary" hx-get="/partials/task-list" hx-target="#task-list" hx-swap="outerHTML">Refresh</button>
+    </div>
+    <div id="task-list">
+      {% include "partials/task_list.html" %}
+    </div>
+  </article>
+  <article x-data="focusTimer()" @session-start.window="start($event.detail)">
+    <h2>Focus Timer</h2>
+    <template x-if="!active">
+      <p class="muted">Pick a task and smash the Start Focus button.</p>
+    </template>
+    <template x-if="active">
+      <div class="timer">
+        <h3 x-text="taskTitle"></h3>
+        <p class="countdown" x-text="formattedTime"></p>
+        <div class="button-row">
+          <button @click="markDistracted" type="button">I got distracted (x<span x-text="distracts"></span>)</button>
+          <button class="secondary" @click="finish(false)" type="button">Pause</button>
+          <button class="contrast" @click="finish(true)" type="button">Done</button>
+        </div>
+      </div>
+    </template>
+  </article>
+</section>
+
+<section class="grid">
+  <article>
+    <h2>Storm Protocol</h2>
+    <p>Spinning out? Trigger the rescue steps.</p>
+    <button
+      hx-post="/storm"
+      hx-trigger="click"
+      hx-target="#storm-steps"
+      hx-swap="innerHTML"
+      type="button"
+      class="contrast"
+    >
+      Deploy Storm Protocol
+    </button>
+    <ol id="storm-steps" class="storm-steps"></ol>
+  </article>
+  <article>
+    <h2>Stats Snapshot</h2>
+    <div id="stats-panel" hx-get="/partials/stats" hx-trigger="load, every 120s" hx-target="#stats-panel" hx-swap="outerHTML">
+      {% include "partials/stats.html" %}
+    </div>
+  </article>
+</section>
+
+<script>
+  function focusTimer() {
+    return {
+      active: false,
+      sessionId: null,
+      taskTitle: "",
+      expectedMinutes: 25,
+      startTime: null,
+      distracts: 0,
+      interval: null,
+      ticker: 0,
+      get formattedTime() {
+        if (!this.startTime) return "00:00";
+        this.ticker;
+        const diff = Math.floor((Date.now() - this.startTime) / 1000);
+        const remaining = Math.max(0, this.expectedMinutes * 60 - diff);
+        const minutes = String(Math.floor(remaining / 60)).padStart(2, "0");
+        const seconds = String(remaining % 60).padStart(2, "0");
+        return `${minutes}:${seconds}`;
+      },
+      start(data) {
+        this.active = true;
+        this.sessionId = data.session_id;
+        this.taskTitle = data.task;
+        this.expectedMinutes = data.est_minutes || 25;
+        this.startTime = Date.now();
+        this.distracts = 0;
+        this.ticker = 0;
+        this.interval = setInterval(() => {
+          this.ticker++;
+        }, 1000);
+      },
+      async finish(completed) {
+        if (!this.sessionId) return;
+        const response = await fetch("/sessions/stop", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            session_id: this.sessionId,
+            completed,
+            distracts: this.distracts,
+            est_minutes: this.expectedMinutes,
+          }),
+        });
+        if (response.ok) {
+          const data = await response.json();
+          this.$dispatch("session-complete", data);
+          htmx.ajax("GET", "/partials/task-list", { target: "#task-list", swap: "outerHTML" });
+          htmx.ajax("GET", "/partials/rewards", { target: "#reward-list", swap: "outerHTML" });
+          htmx.ajax("GET", "/partials/stats", { target: "#stats-panel", swap: "outerHTML" });
+        }
+        this.stop();
+      },
+      stop() {
+        this.active = false;
+        this.sessionId = null;
+        this.taskTitle = "";
+        this.startTime = null;
+        this.distracts = 0;
+        this.ticker = 0;
+        if (this.interval) {
+          clearInterval(this.interval);
+          this.interval = null;
+        }
+      },
+      async markDistracted() {
+        if (!this.sessionId) return;
+        const response = await fetch(`/sessions/${this.sessionId}/distract`, {
+          method: "POST",
+        });
+        if (response.ok) {
+          const data = await response.json();
+          this.distracts = data.distract_count;
+        }
+      },
+    };
+  }
+
+  document.body.addEventListener("click", async (event) => {
+    const startBtn = event.target.closest("button[data-task]");
+    if (!startBtn) return;
+    const taskId = Number(startBtn.dataset.task);
+    const est = Number(startBtn.dataset.est || "25");
+    const response = await fetch("/sessions/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ task_id: taskId }),
+    });
+    if (response.ok) {
+      const data = await response.json();
+      data.est_minutes = est;
+      window.dispatchEvent(new CustomEvent("session-start", { detail: data }));
+      htmx.ajax("GET", "/partials/task-list", { target: "#task-list", swap: "outerHTML" });
+    }
+  });
+
+  document.body.addEventListener("session-complete", (event) => {
+    if (!event.detail) return;
+    const toast = document.createElement("div");
+    toast.className = "toast";
+    toast.textContent = `Session logged! +${event.detail.earned_points} points.`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+  });
+
+  document.body.addEventListener("points:update", (event) => {
+    const balance = event.detail?.balance;
+    if (typeof balance === "number") {
+      const el = document.getElementById("points-balance");
+      if (el) el.textContent = balance;
+    }
+  });
+
+  document.body.addEventListener("stats:refresh", () => {
+    htmx.ajax("GET", "/partials/stats", { target: "#stats-panel", swap: "outerHTML" });
+  });
+</script>
+{% endblock %}
