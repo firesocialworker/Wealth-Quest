@@ -1,0 +1,135 @@
+body {
+  background: #101728;
+  color: #f5f7ff;
+  font-family: "Inter", system-ui, sans-serif;
+}
+
+.container {
+  padding-bottom: 4rem;
+}
+
+.header {
+  margin: 2rem 0 1rem 0;
+}
+
+.tagline {
+  color: #cbd5ff;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.task-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.task-list li {
+  background: #1c2541;
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: start;
+}
+
+.task-list .meta,
+.task-list .note,
+.task-list .due {
+  margin: 0.25rem 0;
+  color: #cbd5ff;
+}
+
+.task-list .note {
+  font-size: 0.9rem;
+}
+
+.task-list .due {
+  font-weight: 600;
+  color: #ffb347;
+}
+
+.task-list .actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.balance {
+  font-size: 1.2rem;
+}
+
+.reward-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.reward {
+  background: #2b3561;
+  border-radius: 10px;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+.reward strong {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.timer {
+  background: #1c2541;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.countdown {
+  font-size: 2.5rem;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.storm-steps {
+  margin-top: 1rem;
+  color: #cbd5ff;
+  padding-left: 1.5rem;
+}
+
+.stats p {
+  margin: 0.25rem 0;
+}
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  background: #38bdf8;
+  color: #031026;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(3, 16, 38, 0.4);
+  font-weight: 600;
+}
+
+@media (max-width: 600px) {
+  .task-list li {
+    flex-direction: column;
+  }
+
+  .button-row {
+    flex-direction: column;
+  }
+}

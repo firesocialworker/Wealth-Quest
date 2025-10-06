@@ -1,0 +1,20 @@
+<ul class="task-list">
+  {% if tasks %}
+    {% for task in tasks %}
+      <li>
+        <div>
+          <h3>{{ task.title }}</h3>
+          <p class="meta">{{ task.context|capitalize }} • est {{ task.est_minutes }} min • priority {{ task.priority_score }}</p>
+          {% if task.note %}<p class="note">{{ task.note }}</p>{% endif %}
+          {% if task.due_date %}<p class="due">Due {{ task.due_date }}</p>{% endif %}
+        </div>
+        <div class="actions">
+          <button data-task="{{ task.id }}" data-est="{{ task.est_minutes }}">Start Focus</button>
+          <button class="secondary" hx-post="/tasks/{{ task.id }}/complete" hx-target="#task-list" hx-swap="outerHTML">Mark Done</button>
+        </div>
+      </li>
+    {% endfor %}
+  {% else %}
+    <li class="empty">All clear. Capture something tiny or redeem a reward.</li>
+  {% endif %}
+</ul>
